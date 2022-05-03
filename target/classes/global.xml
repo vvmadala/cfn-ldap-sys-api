@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:mule-aws-secrets-manager="http://www.mulesoft.org/schema/mule/mule-aws-secrets-manager" xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway" xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:error-handler-plugin="http://www.mulesoft.org/schema/mule/error-handler-plugin" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
+http://www.mulesoft.org/schema/mule/error-handler-plugin http://www.mulesoft.org/schema/mule/error-handler-plugin/current/mule-error-handler-plugin.xsd
+http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd
+http://www.mulesoft.org/schema/mule/mule-aws-secrets-manager http://www.mulesoft.org/schema/mule/mule-aws-secrets-manager/current/mule-mule-aws-secrets-manager.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+	
+	<validation:config name="Validation_Config" doc:name="Validation Config" doc:id="19243568-62b5-44a4-be93-656e2340f41e" />
+	<json-logger:config name="JSON_Logger_Config" doc:name="JSON Logger Config" doc:id="b406ec6b-5cfe-4d3c-8e63-c21e6678564a" environment="${mule.env}"/>
+	<http:listener-config name="httpListenerConfig" doc:description="Config for HTTPs listener ">
+        <http:listener-connection host="0.0.0.0" port="${https.port}" protocol="HTTPS">
+			<tls:context >
+				<tls:key-store type="jks" path="${tls.keystore.path}" alias="${tls.keystore.alias}" keyPassword="${secure::tls.keystore.keypassword}" password="${secure::tls.keystore.storepassword}" />
+			</tls:context>
+		</http:listener-connection>
+    </http:listener-config>
+   
+	<configuration-properties doc:name="Configuration properties" doc:id="40830ced-d903-4049-bcce-f6f8fee0115f" file="config/common.yaml" doc:description="Configuration for common application properties"/>
+	
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="6902722e-0a19-42ab-b5a3-9c71090d65ad" file="config/secure-${mule.env}.yaml" key="${mule.vault.key}" doc:description="Configuration for Secure properties"/>
+	<!--  <api-gateway:autodiscovery apiId="${autodiscovery.apiId}" doc:name="API Autodiscovery" doc:id="e77490b2-fbee-4185-95b0-b592188f608e" flowRef="abbvie-template-api-main" ignoreBasePath="true"/> -->
+	<configuration-properties doc:name="Configuration properties" doc:id="c63e8198-ee3b-4404-b7e0-7e97aedc7f5b" doc:description="Configuration to load environment specific properties" file="config/${mule.env}.yaml" />
+	<import doc:name="Import" doc:id="24ba074e-2510-4e93-abb6-c83375762117" file="common-util.xml" doc:description="Import the common utility flows from common modules library"/>
+	
+	<error-handler-plugin:config name="Error_Handler_Plugin_Config" doc:name="Error Handler Plugin Config" doc:id="890490e1-bd1e-4db2-a897-d9601bf55e34" doc:description="Configuration for Error Handler Plugin"/>
+	<api-gateway:autodiscovery apiId="${api.id}" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="574fe1d6-8ed0-4796-8bcc-ad89533a8594" flowRef="raml-specification-template-api-main" doc:description="Api AutoDiscovery config"/>
+	<error-handler name="common-api-errorHandler" doc:id="78f66489-3a30-407c-88c6-b9d03c91f838">
+		<on-error-propagate enableNotifications="true"
+				logException="true" doc:name="On Error Propagate"
+				doc:id="e0e8dff3-620b-4dcb-857a-2cb84c97c7f1" type="ANY">
+				<error-handler-plugin:on-error
+					doc:name="Process Error"
+					doc:id="2190c002-d6f1-4802-940d-50c4154b927a"
+					config-ref="Error_Handler_Plugin_Config" notFoundError="The endpoint has not been implemented" previousErrors='#[vars.errorDetails default[]]'>
+					<error-handler-plugin:custom-errors><![CDATA[#[${file::dwl/customErrors.dwl}]]]></error-handler-plugin:custom-errors>
+				</error-handler-plugin:on-error>
+				<set-variable value="#[attributes.httpStatus]"
+					doc:name="Set Variable"
+					doc:id="9bcfca48-3f4a-41e2-b0a6-d642d60000d2"
+					variableName="httpStatus" />
+			</on-error-propagate>
+	</error-handler> 
+	<configuration doc:name="Configuration" doc:id="4f3b2d63-7977-4feb-953c-c88d5ef5254d" defaultErrorHandler-ref="common-api-errorHandler" doc:description="Global error handler config"/>
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="d97e227a-351d-46af-bf97-4f5cc47ef935" doc:description="Salesforce Config">
+		<salesforce:basic-connection username="${secure::salesforce.username}" password="${secure::salesforce.password}"/>
+	</salesforce:sfdc-config>
+</mule>

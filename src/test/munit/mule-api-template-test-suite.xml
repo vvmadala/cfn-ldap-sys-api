@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
+	xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+	<munit:config name="template-example-api-impl-test-suite.xml" />
+	<http:request-config name="HTTP_Request_configuration_Tester" doc:name="HTTP Request configuration" doc:id="4b00c9f5-e0b2-4d47-afb7-98c1d3248e0e" basePath="/api/v1" responseTimeout="240000">
+		<http:request-connection host="localhost" port="${https.port}" protocol="HTTPS">
+			<tls:context >
+				<tls:trust-store insecure="true" />
+			</tls:context>
+		</http:request-connection>
+	</http:request-config>
+	<munit:test name="get:\template:api-implTest-Success" description="Test" doc:id="80b1e1eb-354b-422f-849b-a6b905f48ea8">
+		<munit:enable-flow-sources>
+			<munit:enable-flow-source value="raml-specification-template-api-main" />
+			<munit:enable-flow-source value="get:\template:raml-specification-template-api-config" />	        
+    		</munit:enable-flow-sources>
+		<munit:execution >
+			<http:request method="GET" doc:name="Invoke API" doc:id="5cdfe4d3-4517-4613-bf25-12a384c8a91e" config-ref="HTTP_Request_configuration_Tester" path="/template">
+				<http:headers ><![CDATA[#[output application/java
+---
+{
+	"client_secret" : "xxxxx",
+	"client_id" : "xxxxx"
+}]]]></http:headers>
+				<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"param1" : 123
+}]]]></http:query-params>
+			</http:request>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-that doc:name="Check Final Payload" doc:id="fd95efb6-a156-4782-be4b-b948cc72a9f6" expression="#[payload.key1]" is="#[MunitTools::equalTo('value1')]" message="Value Matches"/>
+			<munit-tools:assert-that doc:name="HTTP Status is 200" doc:id="daf3c1c1-0638-4433-9f56-73c9c03b3c64" expression="#[attributes.statusCode]" is="#[MunitTools::equalTo(200)]"/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="get:\template:api-implTest-validationError" description="Test" doc:id="2dadf9da-6fe6-4493-b797-233a104d99d6" ignore="true">
+		<munit:enable-flow-sources>
+			<munit:enable-flow-source value="raml-specification-template-api-main" />
+			<munit:enable-flow-source value="get:\template:raml-specification-template-api-config" />	        
+    		</munit:enable-flow-sources>
+		<munit:execution >
+			<try doc:name="Try" doc:id="7b197348-347c-440f-8266-8e611794edc9" >
+				<http:request method="GET" doc:name="Invoke API" doc:id="c996cc69-4a8c-4ffb-a3a8-8ac355453b8d" config-ref="HTTP_Request_configuration_Tester" path="/template">
+				<http:headers><![CDATA[#[output application/java
+---
+{
+	"client_secret" : "xxxxx",
+	"client_id" : "xxxxx"
+}]]]></http:headers>
+				<http:query-params><![CDATA[#[output application/java
+---
+{
+	"param1" : '123a'
+}]]]></http:query-params>
+			</http:request>
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="3bf89604-88d0-4e97-85f6-01f1d0a69b58" type="HTTP:BAD_REQUEST">
+						<ee:transform doc:name="Transform Message" doc:id="2ed98c6e-d441-43b5-bc48-7765a5db312b" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+error.errorMessage.payload]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+						<logger level="INFO" doc:name="Logger" doc:id="7a125f87-19f6-454b-9a50-9fb2d889333d" message="#[%dw 2.0
+output application/json
+---
+payload]"/>
+					</on-error-continue>
+				</error-handler>
+			</try>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-that doc:name="Error Code is 400" doc:id="5ee6f4d2-a75d-4392-bccb-631df9b8a146" expression="#[payload.errorDetails.code[0]]" is="#[MunitTools::equalTo(400)]"/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="get:\:api-impl-test-payload-check" doc:id="fc6711b8-0fbf-4527-b737-db3ca4ead694" >
+		<munit:behavior >
+			<munit:set-event doc:name="Set Input" doc:id="05e03689-4f13-4260-8dc0-c0390d7f2ce6" >
+				<munit:payload value="#[readUrl('classpath://getapiimpltest/set-event_payload.dwl')]" encoding="UTF-8" />
+				<munit:attributes value="#[readUrl('classpath://getapiimpltest/set-event_attributes.dwl')]" />
+				<munit:variables >
+					<munit:variable key="outboundHeaders" value="#[readUrl('classpath://getapiimpltest/set-event_variable_.dwl')]" />
+					<munit:variable key="x-root-correlation-id" value="#[output application/java --- readUrl('classpath://getapiimpltest/set-event_variable_1.dwl')]" encoding="UTF-8" mediaType="application/java" />
+				</munit:variables>
+			</munit:set-event>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to get:\ping:raml-specification-template-api-config" doc:id="848a83b4-5445-4024-98d7-930bec5e316d" name="get:\ping:raml-specification-template-api-config"/>
+		</munit:execution>
+		<munit:validation >
+			<ee:transform doc:name="Delete Time Field" doc:id="d4627c92-cc4b-4190-899e-cf3d9d6d80eb" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"status": payload.status,
+  	"environment": payload.environment
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<munit-tools:assert doc:name="Assert payload" doc:id="0859af25-80f3-4b9f-adc3-3a6d10101c6c" message="The payload does not match">
+				<munit-tools:that ><![CDATA[#[%dw 2.0
+import getapiimpltest::assert_expression_payload
+---
+assert_expression_payload::main({payload: payload, attributes: attributes, vars: vars})]]]></munit-tools:that>
+			</munit-tools:assert>
+			<munit-tools:verify-call doc:name="Verify call util:healthcheck" doc:id="78586fcc-bdbd-492c-ad10-c0b0f24202b0" processor="flow-ref">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="util:healthcheck" attributeName="doc:name" />
+				</munit-tools:with-attributes>
+			</munit-tools:verify-call>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="check-dependencies-flow-test" doc:id="27a6c24c-b890-4f64-a2c8-3991c44c225c" >
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock Query User" doc:id="78948237-6668-4d78-a308-78c8201b5edb" processor="salesforce:query">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="f91685a3-c83f-46c7-b2e4-38c44b7968c8" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[output application/java --- readUrl('classpath://checkdependenciesflowtest/mock_payload.dwl')]" mediaType="application/java" encoding="UTF-8" />
+					<munit-tools:variables >
+						<munit-tools:variable key="outboundHeaders" value="#[readUrl('classpath://checkdependenciesflowtest/mock_variable_.dwl')]" />
+					</munit-tools:variables>
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit:set-event doc:name="Set Input" doc:id="506f34ca-165f-4a25-96c1-41dab7c9bcb3" >
+				<munit:payload value="#[readUrl('classpath://checkdependenciesflowtest/set-event_payload.dwl')]" encoding="UTF-8" />
+				<munit:attributes value="#[readUrl('classpath://checkdependenciesflowtest/set-event_attributes.dwl')]" />
+				<munit:variables >
+					<munit:variable key="outboundHeaders" value="#[readUrl('classpath://checkdependenciesflowtest/set-event_variable_.dwl')]" />
+				</munit:variables>
+			</munit:set-event>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to ping-subflow" doc:id="4d920b65-a211-48d8-b34a-40a88992a746" name="ping-subflow"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:verify-call doc:name="Verify Transform Message" doc:id="6cb96120-cbbd-46f7-b582-632c0e4d3425" processor="ee:transform" times="1">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="bbac4172-0518-4341-b2e1-1357c77fc1a8" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:verify-call>
+		</munit:validation>
+	</munit:test>
+</mule>

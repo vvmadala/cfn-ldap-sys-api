@@ -1,0 +1,18 @@
+### Environment specific non secure  properties go here ###
+
+
+### API ID ### Create API Configuration in API Manager for UAT Env and update the id. 
+api:
+  id: "123"
+ 
+json:
+  logger:
+    disabled:
+      fields: ""
+
+
+
+
+  
+
+  

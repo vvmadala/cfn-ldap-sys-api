@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+	
+	
+	<sub-flow name="get:\template:api-impl" doc:id="18351123-d8d4-4ab4-9dc1-5d79a6f258ad" >
+		<json-logger:logger doc:name="Start Logger" doc:id="0f8fb3cd-d5b3-460b-a5dd-93cfb4014bab" config-ref="JSON_Logger_Config" message="GET: \template Implementation Start"/>
+		<ee:transform doc:name="set var queryParams" doc:id="97210ccd-4ef0-42e2-8f13-aca2023716ae" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="queryParams" ><![CDATA[attributes.queryParams.param1  default '']]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<choice doc:name="Choice Validate Query Params" doc:id="53589e80-415b-4840-a18c-3729f37eec57" >
+			<when expression="#[!isEmpty(vars.queryParams)]">
+				<validation:is-number doc:name="Is number" doc:id="c98f3075-34e1-41ce-922a-495243c84354" config-ref="Validation_Config" value="#[vars.queryParams]" message="Parameter is not a Number" numberType="INTEGER"/>
+				<ee:transform doc:name="payload" doc:id="a39cfc89-209f-4b6f-aaff-de623dfd46d3" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  key1: "value1",
+  key2: "value2"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="payload" doc:id="2ef8ae74-f13b-4fc4-ac4c-8d2159f61b37" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  key1: "value1",
+  key2: "value2"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</otherwise>
+		</choice>
+		<json-logger:logger doc:name="(Debug) Logger" doc:id="54b5e69a-2f94-41ec-9309-36a59df08686" config-ref="JSON_Logger_Config" message="After GET: /template Transform" tracePoint="AFTER_TRANSFORM" priority="DEBUG" category="applicationDebug"/>
+		<json-logger:logger doc:name="End Logger" doc:id="af8339f0-b5f1-4da9-8446-85d923a8a3a3" config-ref="JSON_Logger_Config" message="GET: \template Implementation End" tracePoint="END">
+			<json-logger:content ><![CDATA[GET: \template Implementation End]]></json-logger:content>
+		</json-logger:logger>
+	</sub-flow>
+	
+</mule>

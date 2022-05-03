@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+	<sub-flow name="ping-subflow" doc:id="29a5ebb6-95c0-46df-9f43-d70faa5f11a5" >
+		<choice doc:name="Choice" doc:id="3ed05bb0-45dc-4ce5-9e9f-30c31ad77fdd" >
+			<when expression="#[attributes.queryParams.checkDependencies]">
+				<flow-ref doc:name="check-dependencies-flow" doc:id="6aed0639-f8d6-474e-b8b8-305b13ee9ad3" name="check-dependencies-flow"/>
+			</when>
+			<otherwise >
+				<flow-ref doc:name="util:healthcheck" doc:id="b44e3efb-ef44-40a0-b4ee-2a8a72605d01" name="util:healthcheck" />
+			</otherwise>
+		</choice>
+	</sub-flow>
+		<flow name="check-dependencies-flow" doc:id="b7c3cf2a-4b3a-40bc-b26a-b9f0ce22834b" >
+		<salesforce:query doc:name="Query User" doc:id="f91685a3-c83f-46c7-b2e4-38c44b7968c8" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query><![CDATA[select id from User where Username=':username']]></salesforce:salesforce-query>
+			<salesforce:parameters><![CDATA[#[output application/java
+---
+{
+	username : 'asanthana@mulesoft.com.cfn'
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<ee:transform doc:name="Transform Message" doc:id="bbac4172-0518-4341-b2e1-1357c77fc1a8">
+					<ee:message>
+						<ee:set-payload resource="dwl/check-dependencies-running.dwl" />
+					</ee:message>
+				</ee:transform>
+		<error-handler >
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="be6cceff-cb91-4746-b982-ab7339a253f8" >
+				<ee:transform doc:name="Transform Message" doc:id="dcd6bbe1-c55f-4555-a6d3-a1f99c522a99">
+			<ee:message>
+				<ee:set-payload resource="dwl/check-dependencies-error.dwl" />
+			</ee:message>
+		</ee:transform>
+			</on-error-continue>
+		</error-handler>
+	</flow>
+	</mule>
